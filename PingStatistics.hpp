@@ -31,6 +31,9 @@ public:
     int getReceived() const;
     int getErrors() const;
     int getPacketLoss() const;
+
+    double getMinTime() const;
+    double getMaxTime() const;
     
     void printDetailedStatistics(const std::string& host) const;
 };
