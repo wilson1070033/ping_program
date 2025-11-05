@@ -1,89 +1,413 @@
-C++ 詳細 Ping 工具 (Verbose Ping)
+# C++ ICMP Ping 工具
 
-這是一個使用 C++ 實作的 ICMP ping 工具。它使用原始通訊端 (Raw Sockets) 來傳送 ICMP Echo Request 封包，並接收 Echo Reply 封包。
+## 專案概述
 
-此工具的主要特色是其「詳細模式」(Verbose Mode) 輸出，它會顯示封包準備、傳輸、接收和標頭分析的每一步，非常適合用於學習網路程式設計和 ICMP 協定。
+這是一個使用 C++ 開發的專業級 ICMP（Internet Control Message Protocol）ping 工具，採用原始通訊端（Raw Socket）技術實作網路診斷功能。本工具提供詳細的封包分析與統計資訊，適用於網路除錯、效能監控與教學研究用途。
 
-功能特色
+---
 
-主機名稱解析：可接受 IP 位址或主機名稱 (例如 google.com)。
+## 核心功能
 
-ICMP 封包處理：手動建立 ICMP 標頭並計算校驗和 (Checksum)。
+### 網路診斷功能
+- **主機名稱解析**：支援 IPv4 位址或完整網域名稱（FQDN）
+- **ICMP 封包處理**：手動構建 ICMP Echo Request 封包，包含完整的標頭欄位與校驗和計算
+- **來回時間測量**：精確計算封包往返時間（Round-Trip Time, RTT），精度達微秒級
 
-詳細的除錯輸出：
+### 詳細除錯輸出
+- **通訊端管理追蹤**：顯示通訊端建立、設定與關閉的完整流程
+- **封包準備資訊**：展示 ICMP 標頭各欄位（Type、Code、ID、Sequence、Checksum）
+- **傳輸狀態監控**：即時回報封包傳送與接收狀態
+- **標頭深度解析**：
+  - IP 標頭分析（版本、標頭長度、TTL、協定、總長度）
+  - ICMP 標頭分析（類型、代碼、識別碼、序號、校驗和）
+- **封包驗證邏輯**：顯示完整的封包匹配過程（類型、ID、序號驗證）
 
-顯示通訊端建立和設定的過程。
+### 統計分析功能
+- **基礎封包統計**
+  - 已傳送封包數量
+  - 已接收封包數量
+  - 封包遺失數量與遺失率（百分比）
+  - 錯誤計數
 
-顯示封包準備的詳細資訊 (Type, Code, ID, Sequence, Checksum)。
+- **RTT 時間統計**
+  - 最小來回時間（Min RTT）
+  - 平均來回時間（Average RTT）
+  - 最大來回時間（Max RTT）
+  - 標準差（Standard Deviation）
+  - 全距（Range）
 
-顯示封包傳輸的狀態。
+- **RTT 分佈分析**
+  - 顯示每個封包的個別 RTT 值
+  - 提供完整的測試持續時間資訊
 
-在接收時，詳細分析傳入封包的 IP 標頭 (TTL, Protocol 等) 和 ICMP 標頭。
+---
 
-顯示封包驗證 logique (比對 Type, ID, Sequence)。
+## 技術規格
 
-完整的統計報告：
+### 開發環境
+- **程式語言**：C++（符合 C++11 標準）
+- **編譯器**：GCC 4.8+ 或 Clang 3.4+
+- **作業系統**：Linux、macOS 或其他支援 BSD Socket 的 Unix-like 系統
 
-封包統計：已傳送、已接收、已遺失、遺失率 (%)。
+### 網路協定
+- **協定層級**：網路層（Network Layer）
+- **使用協定**：ICMP（Internet Control Message Protocol）
+- **封包類型**：Echo Request（Type 8）/ Echo Reply（Type 0）
+- **通訊端類型**：SOCK_RAW（原始通訊端）
 
-RTT 統計：最小、平均、最大來回時間 (ms)。
+### 權限需求
+- **執行權限**：需要 root 或 sudo 權限
+- **原因**：原始通訊端操作需要系統管理員權限
 
-進階統計：計算 RTT 的標準差 (Standard Deviation) 和全距 (Range)。
+---
 
-RTT 分佈：列出每一次成功 ping 的 RTT 值。
+## 系統需求
 
-需求
+### 必要條件
+- C++ 編譯器（g++ 或 clang++）
+- Unix-like 作業系統（Linux 或 macOS）
+- Root 權限（用於執行程式）
+- 標準 C++ 函式庫
 
-一個 C++ 編譯器 (例如 g++ 或 clang++)。
+### 相依函式庫
+- `libm`（數學函式庫，用於標準差計算）
+- 系統標準標頭檔：
+  - `<sys/socket.h>`
+  - `<netinet/ip.h>`
+  - `<netinet/ip_icmp.h>`
+  - `<arpa/inet.h>`
 
-Linux, macOS 或其他支援 BSD sockets 的 Unix-like 系統。
+---
 
-執行時需要 Root (sudo) 權限，因為程式使用了 SOCK_RAW 原始通訊端。
+## 編譯指南
 
-如何編譯
+### 基本編譯
 
-您可以使用 g++ 來編譯此程式。因為我們已經將程式碼拆分為多個 .cpp 檔案，所以需要將它們全部納入編譯指令中。
+使用以下指令編譯專案：
 
-我們仍需要連結 m 函式庫 (math library) 因為 PingStatistics 中使用了 sqrt 來計算標準差。
-
+```bash
 g++ -o ping main.cpp PingClient.cpp ICMPPacket.cpp PingStatistics.cpp utils.cpp -lm
+```
 
+### 編譯參數說明
 
-如何執行
+- **`-o ping`**：指定輸出檔案名稱為 `ping`
+- **`-lm`**：連結數學函式庫（用於 `sqrt()` 函式）
 
-由於需要 root 權限，請使用 sudo 來執行。
+### 最佳化編譯
 
-語法：
+若需要最佳化版本，可加入最佳化旗標：
 
-sudo ./ping <hostname or IP address> [count]
+```bash
+g++ -o ping -O2 -Wall -Wextra main.cpp PingClient.cpp ICMPPacket.cpp PingStatistics.cpp utils.cpp -lm
+```
 
+參數說明：
+- **`-O2`**：啟用第二級最佳化
+- **`-Wall`**：啟用所有警告訊息
+- **`-Wextra`**：啟用額外警告訊息
 
-<hostname or IP address>：您想 ping 的目標。
+---
 
-[count]：(選用) 您想傳送的封包數量。預設為 4。
+## 使用說明
 
-範例
+### 基本語法
 
-Ping Google (預設 4 個封包):
+```bash
+sudo ./ping <目標主機> [封包數量]
+```
 
+### 參數說明
+
+- **`<目標主機>`**（必要）：目標 IP 位址或主機名稱
+- **`[封包數量]`**（選用）：要傳送的封包數量，預設值為 4
+
+### 使用範例
+
+#### 範例一：Ping Google 預設次數
+
+```bash
 sudo ./ping google.com
+```
 
+#### 範例二：Ping 本機 10 次
 
-Ping 本機 (localhost) 10 次:
-
+```bash
 sudo ./ping 127.0.0.1 10
+```
 
+#### 範例三：Ping 特定 IP 位址
 
-程式碼結構
+```bash
+sudo ./ping 8.8.8.8 5
+```
 
-程式碼透過物件導向的方式組織：
+### 執行權限說明
 
-main.cpp: 程式進入點，負責解析命令列參數並啟動 PingClient。
+由於程式使用原始通訊端（`SOCK_RAW`），必須以 root 權限執行：
 
-PingClient (.hpp/.cpp): 核心類別，負責管理通訊端、主機解析、收發迴圈以及協調其他元件。
+- **Linux/macOS**：使用 `sudo` 前綴指令
+- **權限不足時**：程式會顯示錯誤訊息並說明需要 root 權限
 
-ICMPPacket (.hpp/.cpp): 負責建立、準備 ICMP Echo Request 封包，包括資料填充和校驗和計算。
+---
 
-PingStatistics (.hpp/.cpp): 負責追蹤所有已傳送/已接收的封包，並在程式結束時計算和顯示詳細的統計報告。
+## 程式碼架構
 
-utils (.hpp/.cpp): 提供格式化的輸出功能 (例如 printHeader, printSection, printInfo)。
+### 專案結構
+
+本專案採用物件導向設計，將功能模組化為多個類別：
+
+```
+專案根目錄/
+├── main.cpp                  # 程式進入點
+├── PingClient.hpp            # Ping 客戶端類別標頭檔
+├── PingClient.cpp            # Ping 客戶端類別實作
+├── ICMPPacket.hpp            # ICMP 封包類別標頭檔
+├── ICMPPacket.cpp            # ICMP 封包類別實作
+├── PingStatistics.hpp        # 統計類別標頭檔
+├── PingStatistics.cpp        # 統計類別實作
+├── utils.hpp                 # 工具函式標頭檔
+├── utils.cpp                 # 工具函式實作
+└── README.md                 # 專案說明文件
+```
+
+### 核心類別說明
+
+#### **PingClient 類別**
+- **職責**：核心控制器，負責協調整個 ping 流程
+- **主要功能**：
+  - 建立與管理原始通訊端
+  - DNS 主機名稱解析
+  - 封包傳送與接收協調
+  - 逾時控制與錯誤處理
+  - 統計資料收集
+
+#### **ICMPPacket 類別**
+- **職責**：ICMP 封包的建立與處理
+- **主要功能**：
+  - 構建 ICMP Echo Request 封包
+  - 填充封包資料區段
+  - 計算並設定校驗和（Checksum）
+  - 提供封包資料存取介面
+
+#### **PingStatistics 類別**
+- **職責**：統計資訊的收集與分析
+- **主要功能**：
+  - 追蹤已傳送/已接收封包數量
+  - 記錄每次 ping 的 RTT 值
+  - 計算統計指標（最小值、最大值、平均值、標準差）
+  - 產生詳細的統計報告
+
+#### **utils 模組**
+- **職責**：提供格式化輸出與輔助功能
+- **主要功能**：
+  - 格式化輸出函式（標題、區段、資訊列印）
+  - 時間戳記產生
+  - ICMP 類型名稱轉換
+
+---
+
+## 輸出範例
+
+### 執行輸出結構
+
+程式輸出分為以下區段：
+
+#### **1. 初始化階段**
+```
+================================================================================
+  ICMP PING - VERBOSE MODE
+================================================================================
+
+  Program Version          : 1.0
+  Target Host              : google.com
+  Process ID               : 12345
+  Timeout                  : 2 seconds
+```
+
+#### **2. 通訊端建立**
+```
+--------------------------------------------------------------------------------
+  SOCKET CREATION
+--------------------------------------------------------------------------------
+  Creating raw socket...
+  [SUCCESS] Socket created
+  Socket File Descriptor   : 3
+  Socket Type              : SOCK_RAW
+  Protocol                 : IPPROTO_ICMP
+```
+
+#### **3. 封包傳輸**
+```
+================================================================================
+  PACKET 1 OF 4
+================================================================================
+
+--------------------------------------------------------------------------------
+  PACKET PREPARATION
+--------------------------------------------------------------------------------
+  ICMP Type                : Echo Request (8)
+  ICMP Code                : 0
+  Process ID               : 12345
+  Sequence Number          : 1
+  Checksum                 : 0xa3f4
+```
+
+#### **4. 封包接收與分析**
+```
+--------------------------------------------------------------------------------
+  PACKET RECEPTION
+--------------------------------------------------------------------------------
+  Waiting for reply...
+  [RECEIVED] Packet received
+  Bytes Received           : 84
+  
+  IP HEADER ANALYSIS:
+  IP Version               : 4
+  Time To Live (TTL)       : 56
+  
+  ICMP HEADER ANALYSIS:
+  ICMP Type                : 0 (Echo Reply)
+  ICMP Sequence            : 1
+```
+
+#### **5. 統計報告**
+```
+================================================================================
+  PING STATISTICS
+================================================================================
+  Target Host              : google.com
+  Test Duration            : 4.125 seconds
+
+--------------------------------------------------------------------------------
+  PACKET STATISTICS
+--------------------------------------------------------------------------------
+  Packets Transmitted      : 4
+  Packets Received         : 4
+  Packet Loss Rate         : 0 %
+
+--------------------------------------------------------------------------------
+  ROUND-TRIP TIME (RTT) STATISTICS
+--------------------------------------------------------------------------------
+  Minimum RTT              : 15.234 ms
+  Average RTT              : 18.567 ms
+  Maximum RTT              : 24.891 ms
+  Standard Deviation       : 3.425 ms
+```
+
+---
+
+## 注意事項
+
+### 權限相關
+- 程式必須以 root 權限執行，否則無法建立原始通訊端
+- 在生產環境中使用時，建議檢查安全性政策
+
+### 網路環境
+- 某些網路環境可能會封鎖 ICMP 封包
+- 防火牆設定可能影響程式執行結果
+- 本機迴環（loopback）測試可能會接收到自己傳送的 Echo Request
+
+### 效能考量
+- 預設逾時時間為 2 秒，可在 `PingClient` 建構子中調整
+- 封包間隔固定為 1 秒，適合一般網路診斷用途
+- 大量封包傳送可能影響網路效能
+
+### 平台相容性
+- 程式碼使用 POSIX 標準 API，應可在大多數 Unix-like 系統上執行
+- Windows 系統需要使用不同的通訊端 API（Winsock），本專案不支援
+
+---
+
+## 錯誤排除
+
+### 常見錯誤與解決方案
+
+#### **錯誤：Permission denied**
+```
+[FAILED] Cannot create socket
+Error Message: Permission denied
+```
+**解決方案**：使用 `sudo` 執行程式
+
+#### **錯誤：Name or service not known**
+```
+[FAILED] Cannot resolve hostname
+```
+**解決方案**：
+- 檢查主機名稱拼寫是否正確
+- 確認 DNS 設定是否正常
+- 嘗試使用 IP 位址代替主機名稱
+
+#### **錯誤：Network unreachable**
+**解決方案**：
+- 檢查網路連線狀態
+- 確認路由設定是否正確
+- 驗證防火牆規則
+
+---
+
+## 技術細節
+
+### ICMP 封包結構
+
+本工具實作的 ICMP Echo Request 封包結構：
+
+```
+ICMP 標頭（8 bytes）：
+├── Type (1 byte)        : 8（Echo Request）
+├── Code (1 byte)        : 0
+├── Checksum (2 bytes)   : 計算值
+├── Identifier (2 bytes) : Process ID
+└── Sequence (2 bytes)   : 序號（遞增）
+
+資料區段（56 bytes）：
+└── 填充資料（0x20-0x57）
+```
+
+### 校驗和計算
+
+ICMP 校驗和計算採用網際網路校驗和（Internet Checksum）演算法：
+
+1. 將封包視為 16-bit 整數陣列
+2. 對所有 16-bit 值進行求和
+3. 處理溢位的進位
+4. 對結果取一補數（One's Complement）
+
+### RTT 計算方法
+
+來回時間（RTT）計算公式：
+
+```
+RTT = (接收時間 - 傳送時間)
+    = (recv_tv.tv_sec - send_tv.tv_sec) × 1000.0 +
+      (recv_tv.tv_usec - send_tv.tv_usec) / 1000.0
+```
+
+單位：毫秒（ms）
+
+---
+
+## 授權資訊
+
+本專案為教學與研究用途開發，使用者可自由修改與使用。
+
+---
+
+## 版本歷史
+
+- **v1.0**（當前版本）
+  - 實作基本 ICMP ping 功能
+  - 提供詳細的除錯輸出
+  - 完整的統計分析功能
+  - 支援主機名稱解析
+
+---
+
+## 聯絡資訊
+
+如有技術問題或建議，請透過專案管理系統回報。
+
+---
+
+**文件最後更新**：2025 年 11 月
